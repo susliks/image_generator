@@ -18,25 +18,26 @@ global maxnum
 global color_list, color_list_len, flag
 maxnum = 0
  
-OUTPUT_AMOUNT = 1
+OUTPUT_AMOUNT = 5
 CHAR_PER_IMG = 4
-#IM_SIZE = 100
-IM_SIZE = (70, 160, 250, 500, 850)
-#52 104 208 416 832
+IM_SIZE = 832
+#IM_SIZE = (70, 160, 250, 500, 850)
+#IM_SIZE = (52, 104, 208, 416, 832)
 ROTATE_RANGE = (-15, 15)
-WIDTH_RANGE = (0, 1)
-BACK_BLENDING_ALPHA = 0.0
+WIDTH_RANGE = (0, 5)
+BACK_BLENDING_ALPHA = 0.2
 FORE_BLENDING_ALPHA = 0.5
 MIN_COLOR_DIFF = 60
 
-WORD_SIZE = (16, 32, 64, 128, 256)
+WORD_SIZE = 256
+WORD_SIZE2 = (16, 32, 64, 128, 256)
 output_img_cnt = 0
 
 
 def init():
 	path = '..\\output'
 	for i in range(0, 5):
-		new_path = path + '\\' + str(WORD_SIZE[i])
+		new_path = path + '\\' + str(WORD_SIZE2[i])
 		if not os.path.isdir(new_path):
 			os.makedirs(new_path)
 		new_path2 = new_path + '\\' + 'info'
@@ -68,13 +69,16 @@ def blending(im, alpha, im_size):
 		blending_im = Image.open(dir_from + '\\' + blending_im_name, mode = 'r')
 		break
 	
+	'''
 	if(min(blending_im.size) < im_size):
 		blending_im = blending_im.crop((0, 0, min(blending_im.size), min(blending_im.size)))
-		blending_im = blending_im.resize((im_size, im_size))
+		blending_im = blending_im.resize((im_size, im_size / 2))
 	else:
 		horizontal_pos = random.randint(0, blending_im.size[0] - im_size - 1)
-		vertical_pos = random.randint(0, blending_im.size[1] - im_size - 1)
+		vertical_pos = random.randint(0, blending_im.size[1] - im_size / 2 - 1)
 		blending_im = blending_im.crop((horizontal_pos, vertical_pos, horizontal_pos + im_size, vertical_pos + im_size))
+	'''
+	blending_im = blending_im.resize((im_size, int(im_size / 2)))
 
 	im.save('tmp.png', "PNG")
 	im2 = Image.open('tmp.png', mode = 'r')
@@ -117,7 +121,7 @@ def get_info(content, font, word_size, im_size, rotate_angle, img_cnt, im):
 			y2 = y1
 		x = math.floor(0.5 * im_size + x2 + \
 			(font.getoffset(content[i])[1]) * math.sin(math.radians(abs(rotate_angle))))
-		y = math.floor(0.5 * im_size + y2 + font.getoffset(content)[1] * math.cos(math.radians(abs(rotate_angle))) / 2\
+		y = math.floor(0.5 * im_size / 2 + y2 + font.getoffset(content)[1] * math.cos(math.radians(abs(rotate_angle))) / 2\
 				+ font.getoffset(content[i])[1] - font.getoffset(content)[1])
 		#print(font.getoffset(content[i])[0])
 		
@@ -129,8 +133,8 @@ def get_info(content, font, word_size, im_size, rotate_angle, img_cnt, im):
 		height = single_height * math.cos(math.radians(abs(rotate_angle))) + single_width * math.sin(math.radians(abs(rotate_angle)))
 		offset = offset + single_width
 		
-		x = x - 1
-		y = y - 1
+		x = x - 10
+		y = y - 10
 		'''
 		if(word_size <= 32):
 			x = x-1
@@ -138,8 +142,8 @@ def get_info(content, font, word_size, im_size, rotate_angle, img_cnt, im):
 			width = width + 6 * (word_size / 16)
 			height = height + 3
 		'''
-		print(x, y, width+3, height+3, file = f1)
-		crop_im = im.crop((x, y, int(x + width+3), int(y + height + 3)))
+		print(x, y, width+15, height+15, file = f1)
+		crop_im = im.crop((x, y, int(x + width+15), int(y + height + 15)))
 		crop_im.save(crop_path + '\\' + str(word_size) + '_' + str(img_cnt) + '_crop_' + str(i+1) + '_' + content[i] + '.png', "PNG")
 
 
@@ -147,27 +151,27 @@ def generator(content):
 	global output_img_cnt
 	global maxnum
 	output_img_cnt = output_img_cnt + 1
-	for i in range(0, 5):
-		word_size = WORD_SIZE[i]
-		dir_from = '..\\font'
-		font_list = os.listdir(dir_from)
-		font_name = font_list[random.randint(0, len(font_list)-1)]
-		font = ImageFont.truetype(dir_from + '\\' + font_name, word_size)
-		print(font.getsize(content))
-		maxnum = max(maxnum, font.getsize(content)[0])
-		rotate_angle = random.randint(ROTATE_RANGE[0], ROTATE_RANGE[1])
-		width = random.randint(WIDTH_RANGE[0], min(i+1, WIDTH_RANGE[1]))
-		if(i == 0):
-			width = 0
-		back_im, back_color = back_layer(IM_SIZE[i])
-		border_im, border_mask = border_layer(content, font, word_size, width, rotate_angle, IM_SIZE[i])
-		im, fore_mask = fore_layer(content, font, word_size, rotate_angle, back_color, IM_SIZE[i])
-		im.paste(border_im, (0, 0, IM_SIZE[i], IM_SIZE[i]), fore_mask)
-		im.paste(back_im, (0, 0, IM_SIZE[i], IM_SIZE[i]), border_mask)
-		#im.show()
-		im.save('..\\output\\' + str(WORD_SIZE[i]) + '\\' + str(WORD_SIZE[i]) + '_' + str(output_img_cnt) + '.png', "PNG")
-		get_info(content, font, word_size, IM_SIZE[i], rotate_angle, output_img_cnt, im)
-		#im.show()
+	
+	word_size = WORD_SIZE
+	dir_from = '..\\font'
+	font_list = os.listdir(dir_from)
+	font_name = font_list[random.randint(0, len(font_list)-1)]
+	font = ImageFont.truetype(dir_from + '\\' + font_name, word_size)
+	#print(font.getsize(content))
+	maxnum = max(maxnum, font.getsize(content)[0])
+	rotate_angle = random.randint(ROTATE_RANGE[0], ROTATE_RANGE[1])
+	width = random.randint(WIDTH_RANGE[0], WIDTH_RANGE[1])
+
+	back_im, back_color = back_layer(IM_SIZE)
+	border_im, border_mask = border_layer(content, font, word_size, width, rotate_angle, IM_SIZE)
+	im, fore_mask = fore_layer(content, font, word_size, rotate_angle, back_color, IM_SIZE)
+	#print(fore_mask.size)
+	im.paste(border_im, (0, 0, IM_SIZE, int(IM_SIZE / 2)), fore_mask)
+	im.paste(back_im, (0, 0, IM_SIZE, int(IM_SIZE / 2)), border_mask)
+	#im.show()
+	im.save('..\\output\\' + str(WORD_SIZE) + '\\' + str(WORD_SIZE) + '_' + str(output_img_cnt) + '.png', "PNG")
+	get_info(content, font, word_size, IM_SIZE, rotate_angle, output_img_cnt, im)
+	#im.show()
 
 
 def back_layer(im_size):
@@ -175,7 +179,7 @@ def back_layer(im_size):
 	index = random.randint(0, color_list_len-1)
 	color = (int(color_list[index][0]), int(color_list[index][1]), int(color_list[index][2]))
 	#color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-	im = Image.new("RGBA", (im_size, im_size), color)
+	im = Image.new("RGBA", (im_size, int(im_size / 2)), color)
 	im = blending(im, BACK_BLENDING_ALPHA, im_size)
 	return im, color
 
@@ -186,21 +190,21 @@ def border_layer(content, font, word_size, width, rotate_angle, im_size):
 	index = random.randint(0, color_list_len-1)
 	color = (int(color_list[index][0]), int(color_list[index][1]), int(color_list[index][2]))
 	#color = (random.randint(150, 200), random.randint(150, 200), random.randint(150, 200))
-	im = Image.new("RGBA", (im_size, im_size), color)
+	im = Image.new("RGBA", (im_size, int(im_size / 2)), color)
 	mask_size = 2 * im_size
-	mask = Image.new("RGBA", (mask_size, mask_size), color)
+	mask = Image.new("RGBA", (mask_size, int(mask_size / 2)), color)
 	draw = ImageDraw.Draw(mask)
 	word_width, word_height = font.getsize(content)
 	word_width += font.getoffset(content)[0] 
 	word_height += font.getoffset(content)[1]
 	horizontal_pos = (im_size - word_width) / 2
-	vertical_pos = (im_size - word_height) / 2
+	vertical_pos = (im_size / 2 - word_height) / 2
 	for i in range(-1, 2):
 		for j in range(-1, 2):
-			draw.text((mask_size / 4 + horizontal_pos + width*i, mask_size / 4 + vertical_pos + width*j), str(content), font = font, fill = (color[0], color[1], color[2], 0))
+			draw.text((mask_size / 4 + horizontal_pos + width*i, mask_size / 2 / 4 + vertical_pos + width*j), str(content), font = font, fill = (color[0], color[1], color[2], 0))
 	mask = mask.rotate(rotate_angle)
 	crop_pos = int(0.25 * mask_size)
-	mask = mask.crop((crop_pos, crop_pos, crop_pos + im_size, crop_pos + im_size))
+	mask = mask.crop((crop_pos, int(crop_pos / 2), crop_pos + im_size, int(crop_pos / 2 + im_size / 2)))
 	return im, mask
 
 
@@ -216,24 +220,32 @@ def fore_layer(content, font, word_size, rotate_angle, back_color, im_size):
 			dist += abs(back_color[i] - color[i])
 		if(dist > MIN_COLOR_DIFF):
 			break
-	im = Image.new("RGBA", (im_size, im_size), color)
+	im = Image.new("RGBA", (im_size, int(im_size / 2)), color)
 	im = blending(im, FORE_BLENDING_ALPHA, im_size)
-	mask = Image.new("RGBA", (mask_size, mask_size), color)
+	mask = Image.new("RGBA", (mask_size, int(mask_size / 2)), color)
 	draw = ImageDraw.Draw(mask)
 	word_width, word_height = font.getsize(content) 
 	word_width += font.getoffset(content)[0] 
 	word_height += font.getoffset(content)[1]
-	horizontal_pos = im_size / 2 - word_width / 2
-	vertical_pos = im_size / 2 - word_height / 2
-	draw.text((mask_size / 4 + horizontal_pos, mask_size / 4 + vertical_pos), str(content), font = font, fill = (color[0], color[1], color[2], 0))
+	horizontal_pos = (im_size - word_width) / 2
+	vertical_pos = (im_size / 2 - word_height) / 2
+	draw.text((mask_size / 4 + horizontal_pos, mask_size / 2 / 4 + vertical_pos), str(content), font = font, fill = (color[0], color[1], color[2], 0))
 	if(word_size == 256 and flag):
 		flag = False
 		mask.save('tmp11.png', "PNG")
 	mask = mask.rotate(rotate_angle)
 	crop_pos = int(0.25 * mask_size)
-	mask = mask.crop((crop_pos, crop_pos, crop_pos + im_size, crop_pos + im_size))
+	mask = mask.crop((crop_pos, int(crop_pos / 2), crop_pos + im_size, int(crop_pos / 2 + im_size / 2)))
 	return im, mask
 
+
+def image_resize():
+	im = Image.open('..\\output\\256\\256_45.png')
+	width = int(im.size[0] / 16)
+	height = int(im.size[1] / 16)
+	#im = im.resize((width, height), Image.ANTIALIAS)
+	im = im.resize((width, height))
+	im.show()
 
 def main():
 	global flag
@@ -265,6 +277,7 @@ def main():
 					generator(line[loop_cnt*CHAR_PER_IMG: ])
 
 	#print(maxnum)
+	#image_resize()
 	
 
 if __name__ == "__main__":

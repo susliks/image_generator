@@ -18,16 +18,16 @@ global maxnum
 global color_list, color_list_len, flag
 maxnum = 0
  
-OUTPUT_AMOUNT = 5
+OUTPUT_AMOUNT = 200
 CHAR_PER_IMG = 4
 IM_SIZE = 832
 #IM_SIZE = (70, 160, 250, 500, 850)
 #IM_SIZE = (52, 104, 208, 416, 832)
 ROTATE_RANGE = (-15, 15)
-WIDTH_RANGE = (0, 5)
+WIDTH_RANGE = (0, 0)
 BACK_BLENDING_ALPHA = 0.2
-FORE_BLENDING_ALPHA = 0.5
-MIN_COLOR_DIFF = 60
+FORE_BLENDING_ALPHA = 0.3
+MIN_COLOR_DIFF = 150
 
 WORD_SIZE = 256
 WORD_SIZE2 = (16, 32, 64, 128, 256)
@@ -98,7 +98,7 @@ def get_info(content, font, word_size, im_size, rotate_angle, img_cnt, im):
 	offset = 0
 	f1 = open('..\\output\\' + str(word_size) + '\\info\\' + str(word_size) + '_' + str(img_cnt) + '_info.txt', 'wt')
 	crop_path = '..\\output\\' + str(word_size) + '\\crop'
-	#print(content_len, content, file = f1)
+	print(content_len, content, file = f1)
 	for i in range(0, content_len):
 		pre_x = -0.5 * pre_width + offset
 		pre_y = -0.5 * pre_height
@@ -142,7 +142,7 @@ def get_info(content, font, word_size, im_size, rotate_angle, img_cnt, im):
 			width = width + 6 * (word_size / 16)
 			height = height + 3
 		'''
-		print(x, y, width+15, height+15, file = f1)
+		print(x, y, int(width+15), int(height+15), file = f1)
 		crop_im = im.crop((x, y, int(x + width+15), int(y + height + 15)))
 		crop_im.save(crop_path + '\\' + str(word_size) + '_' + str(img_cnt) + '_crop_' + str(i+1) + '_' + content[i] + '.png', "PNG")
 
@@ -240,12 +240,97 @@ def fore_layer(content, font, word_size, rotate_angle, back_color, im_size):
 
 
 def image_resize():
+	dir_from = '..\\output\\256'
+	im_list = os.listdir(dir_from)
+	im_amount = len(im_list)
+	times = 32
+	info_dir_from = '..\\output\\256\\info'
+	for i in range(4):
+		info_dir_to = '..\\output\\' + str(WORD_SIZE2[i]) + '\\info'
+		crop_dir_to = '..\\output\\' + str(WORD_SIZE2[i]) + '\\crop' 
+		times = int(times / 2)
+		for j in range(im_amount):
+			path = dir_from + '\\' + im_list[j]
+			#print(path)
+			if(path.endswith('.png') == False):
+				continue
+			#print(path)
+			im = Image.open(path)
+			width = int(im.size[0] / times)
+			height = int(im.size[1] / times)
+			im = im.resize((width, height), Image.ANTIALIAS)
+			#im.show()
+			im.save('..\\output\\' + str(WORD_SIZE2[i]) + '\\' + str(WORD_SIZE2[i]) + str(im_list[j])[3:], "PNG")
+
+			fin = open(info_dir_from + '\\' + re.sub(r'.png', r'_info.txt', im_list[j]), 'r')
+			fout = open(info_dir_to + '\\' + re.sub(r'.png', r'_info.txt', str(WORD_SIZE2[i]) + str(im_list[j])[3:]), 'wt')
+			line_cnt = 0
+			content = str('')
+			for line in fin:
+				if(line_cnt == 0):
+					line = re.sub(r'\n', r'', line)
+					print(line, file = fout)
+					line = re.split(r'\s', line)
+					content = line[1]
+					#print('!!' + content)
+				else:
+					#print(line)
+					line = re.split(r'\s', line)
+					print(math.floor(float(line[0]) / times), math.floor(float(line[1]) / times), \
+						math.ceil(math.ceil(float(line[2])) / times), math.ceil(math.ceil(float(line[3])) / times), file = fout)
+					crop_im = im.crop((math.floor(float(line[0]) / times), math.floor(float(line[1]) / times), \
+						math.floor(float(line[0]) / times) + math.ceil(math.ceil(float(line[2])) / times), \
+							math.floor(float(line[1]) / times) + math.ceil(math.ceil(float(line[3])) / times)))
+					#im.show()
+					#crop_im.show()
+					crop_im.save(crop_dir_to + '\\' + re.sub(r'.png', r'_crop_', str(WORD_SIZE2[i]) + str(im_list[j])[3:]) + str(line_cnt) + '_' + content[line_cnt - 1] + '.png', "PNG")
+				line_cnt += 1
+
+	'''
+	dir_from = '..\\output\\256\\info'
+	info_list = os.listdir(dir_from)
+	info_amount = len(info_list)
+	times = 32
+	for i in range(4):
+		im_dir_from = '..\\output\\' + str(WORD_SIZE2[i])
+		crop_dir_to = '..\\output\\' + str(WORD_SIZE2[i]) + '\\crop' 
+		times = int(times / 2)
+		dir_to = '..\\output\\' + str(WORD_SIZE2[i]) + '\\info'
+		cnt = 0
+		for j in range(im_amount):
+			path = dir_from + '\\' + info_list[j]
+			if(path.endswith('.txt') == False):
+				continue
+			im_path = im_dir_from + '\\' + re.sub(r'_info.txt', r'.png', info_list[j])
+			cnt += 1
+			fin = open(dir_from + '\\' + info_list[j], 'r')
+			fout = open(dir_to + '\\' + str(WORD_SIZE2[i]) + '_' + str(cnt) + '_info.txt', 'wt')
+			line_cnt = 0
+			content = str('')
+			for line in fin:
+				if(line_cnt == 0):
+					print(line, file = fout)
+				else:
+					print(line)
+					print(math.floor(float(line[0]) / times), math.floor(float(line[1]) / times), \
+						math.floor(math.ceil(float(line[2])) / times), math.floor(math.ceil(float(line[3])) / times), file = fout)
+					crop_im = im.crop((math.floor(float(line[0]) / times), math.floor(float(line[1]) / times), \
+						math.floor(math.ceil(float(line[2])) / times), math.floor(math.ceil(float(line[3])) / times)))
+					crop_im.save(crop_dir_to + '\\' + str(WORD_SIZE2[i]) + '_' + str(cnt) + '_' + str(line_cnt) + '_' + content[line_cnt - 1] + '.png', "PNG")
+				line_cnt += 1
+	'''
+
+
+
+
+	'''
 	im = Image.open('..\\output\\256\\256_45.png')
 	width = int(im.size[0] / 16)
 	height = int(im.size[1] / 16)
 	#im = im.resize((width, height), Image.ANTIALIAS)
 	im = im.resize((width, height))
 	im.show()
+	'''
 
 def main():
 	global flag
@@ -253,7 +338,7 @@ def main():
 
 	get_color()
 	init()
-
+	
 	global maxnum
 	dir_from = '..\\input\\text'
 	input_list = os.listdir(dir_from)
@@ -277,7 +362,7 @@ def main():
 					generator(line[loop_cnt*CHAR_PER_IMG: ])
 
 	#print(maxnum)
-	#image_resize()
+	image_resize()
 	
 
 if __name__ == "__main__":
